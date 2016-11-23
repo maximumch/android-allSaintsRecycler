@@ -24,6 +24,7 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
     private List<Saint> data;
     private LayoutInflater inflater;
 
+    // Сет для хранения номеров выбранных элементов
     private HashSet<Integer> selection;
 
     // Так как класс расширяет ArrayAdapter
@@ -39,21 +40,29 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
         this.inflater = LayoutInflater.from(context);
     }
 
+    // Говорит listview, сколько будет типов элементов
     @Override
     public int getViewTypeCount() {
         return 2;
     }
 
+    // Хелпер чтобы определить, выделены ли
+    // какие-нибудь элементы listview.
     boolean hasSelected()
     {
         return !selection.isEmpty();
     }
 
+    // Хелпер - выделен ли конкретный элемент.
     boolean isSelected(int position)
     {
         return selection.contains(position);
     }
 
+    // Выделение - если элемент выделен, сделать не выделенным;
+    // если не выделен - выделить.
+    // В любом случае при изменении статуса уведомить об этом
+    // адаптер.
     public void toggleSelection(int position, boolean selected) {
         if (selected && !isSelected(position)) {
             selection.add(position);
@@ -83,20 +92,28 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
         return position;
     }
 
+    // Удалить выделенные элементы
     public void deleteSelected() {
 
         List<Integer> items = new ArrayList<>();
 
+        // Вначале формируем List из сета.
         items.addAll(selection);
 
+        // Обратно сортируем этот лист, чтобы
+        // вначале удалять элемент с самым большим
+        // номером.
         Collections.sort(items);
         Collections.reverse(items);
 
+        // Удаляем как сам элемент так и
+        // его признак выделенности.
         for(int i: items) {
             selection.remove(i);
             data.remove(i);
         }
 
+        // Уведомляем об этом адаптер.
         notifyDataSetChanged();
     }
 
@@ -111,13 +128,16 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
         public ImageView button;
     }
 
+    // Удаление элемента через адаптер
     @Override
     public void remove(Saint saint) {
         int position = data.indexOf(saint);
         selection.remove(position);
         data.remove(saint);
+        notifyDataSetChanged();
     }
 
+    // Возвращает тип элемента
     @Override
     public int getItemViewType(int position) {
         if(isSelected(position))
@@ -142,6 +162,9 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
         // 5. Созранить созданный ViewHolder в Tag созданного View
         if(rowView == null)
         {
+            // Создаем элемент в зависимости от его типа.
+            // ListView сам следить за тем, чтобы
+            // передать элемент правильного типа в convertView.
             if(isSelected(position))
                 rowView = inflater.inflate(R.layout.listviewitemselected, parent, false);
             else
@@ -181,9 +204,6 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
         holder.bar.setRating(s.getRating());
 
         // Реакция на click на картинку
-
-        // parent.showContextMenuForChild(holder.button);
-
         holder.button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -191,6 +211,7 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
 
                 Log.d("happy", "button onClick");
 
+                // Отобразим popup меню.
                 showPopupMenu(context, v, position);
 
                 /*
@@ -209,7 +230,12 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
         return rowView;
     }
 
+    // Хелпер для запуска popup меню.
+    // Оно используется так как
+    // если зарегистрировать для listview "длинный" клик,
+    // контекстное меню больше не показывается.
     private void showPopupMenu(Context con, View v, final int pos) {
+        // Отображаем меню только если никакой элемент не выбран.
         if(!hasSelected()) {
             PopupMenu popupMenu = new PopupMenu(con, v);
             popupMenu.inflate(R.menu.context);
@@ -220,9 +246,11 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
                         public boolean onMenuItemClick(MenuItem item) {
                             switch (item.getItemId()) {
                                 case R.id.context_delete:
-                                    selection.remove(pos);
-                                    data.remove(pos);
-                                    notifyDataSetChanged();
+                                    Saint saint = data.get(pos);
+                                    remove(saint);
+                                    // selection.remove(pos);
+                                    // data.remove(pos);
+                                    // notifyDataSetChanged();
                                     return true;
                             }
                             return false;

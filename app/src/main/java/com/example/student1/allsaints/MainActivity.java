@@ -110,10 +110,12 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         // на элемент
         // registerForContextMenu(list);
 
+        // Чтобы запустить мульти селект, нужно один раз
+        // "долго" нажать на элемент listview, поэтому
+        // регистрируем listener.
+        // При этом прекращает работать
+        // контекстное меню для элемента listview.
         list.setOnItemLongClickListener(this);
-
-        // list.setChoiceMode(AbsListView.CHOICE_MODE_MULTIPLE);
-
     }
 
     // Вызывается при создании контекстного меню
@@ -154,6 +156,8 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     // Вызывается при создании меню
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        // Меню рисуется по-разному если есть выделенные элементы
+        // и если выделенных элементов нет.
         if(adapter.hasSelected())
         {
             getMenuInflater().inflate(R.menu.delete, menu);
@@ -187,6 +191,8 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 return true;
             case R.id.main_delete:
                 adapter.deleteSelected();
+                // После удалении выделенных элементов
+                // нужно перерисовать меню.
                 invalidateOptionsMenu();
                 return true;
 
@@ -275,7 +281,11 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         //String saint = saints.get(position);
 
+        // Работает по-разному в зависимости от того, выделены ли
+        // какие-нибудь элементы listview.
         if(!adapter.hasSelected()) {
+            // Если выделенных элементов нет,
+            // покажем активность с информацией.
             Saint s = data.get(position);
             String saint = s.getName();
 
@@ -292,15 +302,22 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         }
         else
         {
+            // Если есть выделенные элементы, будем
+            // изментять статус того, по которому пользователь
+            // "щелкнул".
+            // При этом нужно вызывать пересоздание меню, так как пользователь
+            // мог убрать выделение со всех элементов.
             adapter.toggleSelection(position, !adapter.isSelected(position));
             invalidateOptionsMenu();
         }
     }
 
-
+    // Обработка "длинного" клика
     @Override
     public boolean onItemLongClick(AdapterView<?> adapterView, View view, int position, long l) {
+        // Уведомляем адаптер о том, что статус выделенности элемента изменился.
         adapter.toggleSelection(position, !adapter.isSelected(position));
+        // И вызываем перестроение меню.
         invalidateOptionsMenu();
         return true;
     }
