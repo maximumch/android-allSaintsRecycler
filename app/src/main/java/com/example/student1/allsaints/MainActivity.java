@@ -10,6 +10,7 @@ import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.ListView;
@@ -24,7 +25,7 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
-public class MainActivity extends AppCompatActivity implements AdapterView.OnItemClickListener {
+public class MainActivity extends AppCompatActivity implements AdapterView.OnItemClickListener, AdapterView.OnItemLongClickListener {
 
     // Константы для передачи данных через Intent 
     // Доджны быть доступны детальной Activity
@@ -108,6 +109,11 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         // Чтобы подписать ListView на стандартное контекстное меню по "длинному" щелчку
         // на элемент
         // registerForContextMenu(list);
+
+        list.setOnItemLongClickListener(this);
+
+        // list.setChoiceMode(AbsListView.CHOICE_MODE_MULTIPLE);
+
     }
 
     // Вызывается при создании контекстного меню
@@ -134,36 +140,27 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         Toast.makeText(this, "Deleted: "+ name, Toast.LENGTH_SHORT).show();
 
         //saints.remove(position);
+        /*
         data.remove(position);
         adapter.notifyDataSetChanged();
+        */
+        Saint saint = adapter.getItem(position);
+        adapter.remove(saint);
 
         return super.onContextItemSelected(item);
     }
 
-    // По щелчку на элемент ListView
-    @Override
-    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        //String saint = saints.get(position);
-
-        Saint s = data.get(position);
-        String saint = s.getName();
-
-        // Создаем Intent на запуск детальной Activity
-        Intent intent = new Intent(this, SaintDetail.class);
-
-        // Добавляем туда нужные данные - имя, номер в контейнере и рейтинг
-        intent.putExtra(SAINT_NAME, saint);
-        intent.putExtra(SAINT_ID, position);
-        intent.putExtra(SAINT_RATING, s.getRating());
-
-        // Запускаем Activity и подписываемся на получение результата
-        startActivityForResult(intent, RATING_REQUEST);
-    }
 
     // Вызывается при создании меню
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.main, menu);
+        if(adapter.hasSelected())
+        {
+            getMenuInflater().inflate(R.menu.delete, menu);
+        }
+        else {
+            getMenuInflater().inflate(R.menu.main, menu);
+        }
         return super.onCreateOptionsMenu(menu);
     }
 
@@ -187,6 +184,10 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 return true;
             case R.id.menu_add:
                 showAddDialog();
+                return true;
+            case R.id.main_delete:
+                adapter.deleteSelected();
+                invalidateOptionsMenu();
                 return true;
 
         }
@@ -266,5 +267,41 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 adapter.notifyDataSetChanged();
             }
         }
+    }
+
+
+    // По щелчку на элемент ListView
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        //String saint = saints.get(position);
+
+        if(!adapter.hasSelected()) {
+            Saint s = data.get(position);
+            String saint = s.getName();
+
+            // Создаем Intent на запуск детальной Activity
+            Intent intent = new Intent(this, SaintDetail.class);
+
+            // Добавляем туда нужные данные - имя, номер в контейнере и рейтинг
+            intent.putExtra(SAINT_NAME, saint);
+            intent.putExtra(SAINT_ID, position);
+            intent.putExtra(SAINT_RATING, s.getRating());
+
+            // Запускаем Activity и подписываемся на получение результата
+            startActivityForResult(intent, RATING_REQUEST);
+        }
+        else
+        {
+            adapter.toggleSelection(position, !adapter.isSelected(position));
+            invalidateOptionsMenu();
+        }
+    }
+
+
+    @Override
+    public boolean onItemLongClick(AdapterView<?> adapterView, View view, int position, long l) {
+        adapter.toggleSelection(position, !adapter.isSelected(position));
+        invalidateOptionsMenu();
+        return true;
     }
 }

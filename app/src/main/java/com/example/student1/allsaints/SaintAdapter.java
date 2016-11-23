@@ -2,7 +2,10 @@ package com.example.student1.allsaints;
 
 import android.content.Context;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.PopupMenu;
+import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
@@ -10,6 +13,9 @@ import android.widget.ImageView;
 import android.widget.RatingBar;
 import android.widget.TextView;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
 public class SaintAdapter  extends ArrayAdapter<Saint> {
@@ -17,6 +23,8 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
     private int resource;
     private List<Saint> data;
     private LayoutInflater inflater;
+
+    private HashSet<Integer> selection;
 
     // Так как класс расширяет ArrayAdapter
     // он должен иметь перегруженный конструктор в котором вызывать
@@ -27,7 +35,34 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
         this.context = context;
         this.resource = resource;
         this.data = data;
+        this.selection = new HashSet<>();
         this.inflater = LayoutInflater.from(context);
+    }
+
+    @Override
+    public int getViewTypeCount() {
+        return 2;
+    }
+
+    boolean hasSelected()
+    {
+        return !selection.isEmpty();
+    }
+
+    boolean isSelected(int position)
+    {
+        return selection.contains(position);
+    }
+
+    public void toggleSelection(int position, boolean selected) {
+        if (selected && !isSelected(position)) {
+            selection.add(position);
+            notifyDataSetChanged();
+        }
+        else if (!selected && isSelected(position)) {
+            selection.remove(position);
+            notifyDataSetChanged();
+        }
     }
 
     // Количество элементов в контейнере
@@ -48,6 +83,23 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
         return position;
     }
 
+    public void deleteSelected() {
+
+        List<Integer> items = new ArrayList<>();
+
+        items.addAll(selection);
+
+        Collections.sort(items);
+        Collections.reverse(items);
+
+        for(int i: items) {
+            selection.remove(i);
+            data.remove(i);
+        }
+
+        notifyDataSetChanged();
+    }
+
     // Шаблон ViewHolder
     // Подробнее https://developer.android.com/training/improving-layouts/smooth-scrolling.html#ViewHolder
     static class Holder
@@ -59,9 +111,24 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
         public ImageView button;
     }
 
+    @Override
+    public void remove(Saint saint) {
+        int position = data.indexOf(saint);
+        selection.remove(position);
+        data.remove(saint);
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+        if(isSelected(position))
+            return 1;
+        else
+            return 0;
+    }
+
     // Возвращение нового или переопределенного View для ListView
     @Override
-    public View getView(int position, View convertView, final ViewGroup parent) {
+    public View getView(final int position, View convertView, final ViewGroup parent) {
 
         // View rowView = inflater.inflate(R.layout.listviewitem, parent, false);
         View rowView = convertView;
@@ -75,7 +142,10 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
         // 5. Созранить созданный ViewHolder в Tag созданного View
         if(rowView == null)
         {
-            rowView = inflater.inflate(R.layout.listviewitem, parent, false);
+            if(isSelected(position))
+                rowView = inflater.inflate(R.layout.listviewitemselected, parent, false);
+            else
+                rowView = inflater.inflate(R.layout.listviewitem, parent, false);
 
             TextView name = (TextView) rowView.findViewById(R.id.text);
             TextView dob = (TextView) rowView.findViewById(R.id.dob);
@@ -111,19 +181,55 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
         holder.bar.setRating(s.getRating());
 
         // Реакция на click на картинку
+
+        // parent.showContextMenuForChild(holder.button);
+
         holder.button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Зарегистрируем "родителя" картинки на контекстное меню 
+
+
+                Log.d("happy", "button onClick");
+
+                showPopupMenu(context, v, position);
+
+                /*
+                // Зарегистрируем "родителя" картинки на контекстное меню
                 ((AppCompatActivity)context).registerForContextMenu(parent);
                 // Подожжем контекстное меню 
                 parent.showContextMenuForChild(v);
-                // Разрегистрируем родителя, чтобы контекстное меню не отображалось 
+
+                // Разрегистрируем родителя, чтобы контекстное меню не отображалось
                 // по "длинному" щелчку
                 ((AppCompatActivity)context).unregisterForContextMenu(parent);
+                */
             }
         });
 
         return rowView;
+    }
+
+    private void showPopupMenu(Context con, View v, final int pos) {
+        if(!hasSelected()) {
+            PopupMenu popupMenu = new PopupMenu(con, v);
+            popupMenu.inflate(R.menu.context);
+
+            popupMenu
+                    .setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                        @Override
+                        public boolean onMenuItemClick(MenuItem item) {
+                            switch (item.getItemId()) {
+                                case R.id.context_delete:
+                                    selection.remove(pos);
+                                    data.remove(pos);
+                                    notifyDataSetChanged();
+                                    return true;
+                            }
+                            return false;
+                        }
+                    });
+
+            popupMenu.show();
+        }
     }
 }
