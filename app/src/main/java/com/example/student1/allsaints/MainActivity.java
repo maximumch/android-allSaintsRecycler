@@ -5,15 +5,16 @@ import android.content.Intent;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.DividerItemDecoration;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.helper.ItemTouchHelper;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AbsListView;
-import android.widget.AdapterView;
 import android.widget.EditText;
-import android.widget.ListView;
 import android.widget.Toast;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -25,28 +26,30 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
-public class MainActivity extends AppCompatActivity implements AdapterView.OnItemClickListener, AdapterView.OnItemLongClickListener {
-
+public class MainActivity extends AppCompatActivity
+        implements RecyclerSaintAdapter.OnItemClickListener,
+        RecyclerSaintAdapter.OnItemLongClickListener {
     // Константы для передачи данных через Intent 
-    // Доджны быть доступны детальной Activity
+    // Доджны быть доступны "детальной" Activity
     public static final String SAINT_NAME = "SAINT_NAME";
     public static final String SAINT_ID = "SAINT_ID";
     public static final String SAINT_RATING = "SAINT_RATING";
     public static final int RATING_REQUEST = 777;
 
     private List<Saint> data = new ArrayList<>();
-    private ListView list;
+    private RecyclerView recycler;
 
     // private List<String> saints = new ArrayList<>();
     // private ArrayAdapter<String> adapter;
-    private SaintAdapter adapter;
+    // private SaintAdapter adapter;
+    private RecyclerSaintAdapter adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        list = (ListView) findViewById(R.id.list);
+        recycler = (RecyclerView) findViewById(R.id.list);
 
         // Источник данных для парсера XML из ресурсов
         InputSource mySaints = new InputSource(getResources().openRawResource(R.raw.saints));
@@ -101,10 +104,36 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         */
 
         // Нестадартный адаптер - 3 текстовых поля, рейтинг и картинка с листенером
-        adapter = new SaintAdapter(this, R.layout.listviewitem, data);
+        // adapter = new SaintAdapter(this, R.layout.listviewitem, data);
+        adapter = new RecyclerSaintAdapter(data);
 
-        list.setAdapter(adapter);
-        list.setOnItemClickListener(this);
+        recycler.setAdapter(adapter);
+        recycler.setLayoutManager(new LinearLayoutManager(this));
+
+        recycler.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
+
+        adapter.setOnItemClickListener(this);
+
+        adapter.setOnItemLongClickListener(this);
+
+        ItemTouchHelper helper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
+            @Override
+            public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
+                return false;
+            }
+
+            @Override
+            public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+                int position = viewHolder.getAdapterPosition();
+                if(position != RecyclerView.NO_POSITION)
+                {
+                    adapter.remove(position);
+                }
+            }
+        });
+        helper.attachToRecyclerView(recycler);
+
+        // recycler.setOnItemClickListener(this);
 
         // Чтобы подписать ListView на стандартное контекстное меню по "длинному" щелчку
         // на элемент
@@ -115,44 +144,44 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         // регистрируем listener.
         // При этом прекращает работать
         // контекстное меню для элемента listview.
-        list.setOnItemLongClickListener(this);
+        // list.setOnItemLongClickListener(this);
     }
 
-    // Вызывается при создании контекстного меню
-    @Override
-    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
-        getMenuInflater().inflate(R.menu.context, menu);
-        super.onCreateContextMenu(menu, v, menuInfo);
-    }
+    /*
 
-    // Вызывается при выборе элемента контекстного меню
-    @Override
-    public boolean onContextItemSelected(MenuItem item) {
-        AdapterView.AdapterContextMenuInfo info =
-                (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
-        int position = info.position;
+// Вызывается при создании контекстного меню
+@Override
+public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
+    getMenuInflater().inflate(R.menu.context, menu);
+    super.onCreateContextMenu(menu, v, menuInfo);
+}
 
-        /*
-        String s = saints.get(position);
-        //Snackbar.make(list, "Deleted: "+ s, Snackbar.LENGTH_SHORT).show();
-        Toast.makeText(this, "Deleted: "+ s, Toast.LENGTH_SHORT).show();
-        */
-        Saint s = data.get(position);
-        String name = s.getName();
-        Toast.makeText(this, "Deleted: "+ name, Toast.LENGTH_SHORT).show();
+// Вызывается при выборе элемента контекстного меню
+@Override
+public boolean onContextItemSelected(MenuItem item) {
+    AdapterView.AdapterContextMenuInfo info =
+            (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
+    int position = info.position;
 
-        //saints.remove(position);
-        /*
-        data.remove(position);
-        adapter.notifyDataSetChanged();
-        */
-        Saint saint = adapter.getItem(position);
-        adapter.remove(saint);
+//        String s = saints.get(position);
+//        //Snackbar.make(list, "Deleted: "+ s, Snackbar.LENGTH_SHORT).show();
+//        Toast.makeText(this, "Deleted: "+ s, Toast.LENGTH_SHORT).show();
 
-        return super.onContextItemSelected(item);
-    }
+    Saint s = data.get(position);
+    String name = s.getName();
+    Toast.makeText(this, "Deleted: "+ name, Toast.LENGTH_SHORT).show();
 
+    //saints.remove(position);
+//        data.remove(position);
+//        adapter.notifyDataSetChanged();
 
+    Saint saint = adapter.getItem(position);
+    adapter.remove(saint);
+
+    return super.onContextItemSelected(item);
+}
+
+*/
     // Вызывается при создании меню
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -162,11 +191,13 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         {
             getMenuInflater().inflate(R.menu.delete, menu);
         }
-        else {
+        else
+        {
             getMenuInflater().inflate(R.menu.main, menu);
         }
         return super.onCreateOptionsMenu(menu);
     }
+
 
     // Вызывается при выборе элемента меню
     @Override
@@ -199,6 +230,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         }
         return super.onOptionsItemSelected(item);
     }
+
 
     // Вызывается по нажатию на "+" меню
     private void showAddDialog() {
@@ -275,12 +307,8 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         }
     }
 
-
-    // По щелчку на элемент ListView
     @Override
-    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        //String saint = saints.get(position);
-
+    public void onItemClick(View itemView, int position) {
         // Работает по-разному в зависимости от того, выделены ли
         // какие-нибудь элементы listview.
         if(!adapter.hasSelected()) {
@@ -305,20 +333,36 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             // Если есть выделенные элементы, будем
             // изментять статус того, по которому пользователь
             // "щелкнул".
-            // При этом нужно вызывать пересоздание меню, так как пользователь
-            // мог убрать выделение со всех элементов.
-            adapter.toggleSelection(position, !adapter.isSelected(position));
-            invalidateOptionsMenu();
+            toggleSelection(position);
+
         }
+
     }
+
+
+    // Если изменяется статус выбранности элемента.
+    private void toggleSelection(int pos)
+    {
+        // Уведомляем адаптер о том, что статус выделенности элемента изменился.
+        adapter.toggleSelection(pos);
+        // При этом нужно вызывать пересоздание меню, так как пользователь
+        // мог убрать выделение со всех элементов.
+        invalidateOptionsMenu();
+    }
+
+    @Override
+    public void onItemLongClick(View itemView, int position) {
+        toggleSelection(position);
+    }
+
+    /*
+
 
     // Обработка "длинного" клика
     @Override
     public boolean onItemLongClick(AdapterView<?> adapterView, View view, int position, long l) {
-        // Уведомляем адаптер о том, что статус выделенности элемента изменился.
-        adapter.toggleSelection(position, !adapter.isSelected(position));
-        // И вызываем перестроение меню.
-        invalidateOptionsMenu();
+        toggleSelection(position);
         return true;
     }
+    */
 }

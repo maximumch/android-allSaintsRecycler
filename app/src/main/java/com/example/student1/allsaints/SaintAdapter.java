@@ -36,7 +36,6 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
         this.context = context;
         this.resource = resource;
         this.data = data;
-        this.selection = new HashSet<>();
         this.inflater = LayoutInflater.from(context);
     }
 
@@ -63,33 +62,20 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
     // если не выделен - выделить.
     // В любом случае при изменении статуса уведомить об этом
     // адаптер.
-    public void toggleSelection(int position, boolean selected) {
-        if (selected && !isSelected(position)) {
-            selection.add(position);
-            notifyDataSetChanged();
-        }
-        else if (!selected && isSelected(position)) {
+    public void toggleSelection(int position) {
+        if (isSelected(position)) {
             selection.remove(position);
-            notifyDataSetChanged();
         }
+        else {
+            selection.add(position);
+        }
+        notifyDataSetChanged();
     }
 
     // Количество элементов в контейнере
     @Override
     public int getCount() {
         return data.size();
-    }
-
-    // Получить элемент из контейнера через адаптер
-    @Override
-    public Saint getItem(int position) {
-        return data.get(position);
-    }
-
-    // Идентификатор элемента контейнера
-    @Override
-    public long getItemId(int position) {
-        return position;
     }
 
     // Удалить выделенные элементы
@@ -126,15 +112,6 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
         public TextView dod;
         public RatingBar bar;
         public ImageView button;
-    }
-
-    // Удаление элемента через адаптер
-    @Override
-    public void remove(Saint saint) {
-        int position = data.indexOf(saint);
-        selection.remove(position);
-        data.remove(saint);
-        notifyDataSetChanged();
     }
 
     // Возвращает тип элемента
@@ -195,7 +172,7 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
 
         // View любо пустой, либо содержит уже не актуальные данные
         // Загрузим Святого
-        Saint s = getItem(position);
+        Saint s = data.get(position);
 
         // Актуализируем данные View через ссылки ViewHolder
         holder.name.setText(s.getName());
@@ -203,27 +180,17 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
         holder.dod.setText(s.getDod());
         holder.bar.setRating(s.getRating());
 
+        if(hasSelected())
+            holder.button.setVisibility(View.INVISIBLE);
+        else
+            holder.button.setVisibility(View.VISIBLE);
+
         // Реакция на click на картинку
         holder.button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
-
-                Log.d("happy", "button onClick");
-
                 // Отобразим popup меню.
                 showPopupMenu(context, v, position);
-
-                /*
-                // Зарегистрируем "родителя" картинки на контекстное меню
-                ((AppCompatActivity)context).registerForContextMenu(parent);
-                // Подожжем контекстное меню 
-                parent.showContextMenuForChild(v);
-
-                // Разрегистрируем родителя, чтобы контекстное меню не отображалось
-                // по "длинному" щелчку
-                ((AppCompatActivity)context).unregisterForContextMenu(parent);
-                */
             }
         });
 
@@ -246,11 +213,9 @@ public class SaintAdapter  extends ArrayAdapter<Saint> {
                         public boolean onMenuItemClick(MenuItem item) {
                             switch (item.getItemId()) {
                                 case R.id.context_delete:
-                                    Saint saint = data.get(pos);
-                                    remove(saint);
-                                    // selection.remove(pos);
-                                    // data.remove(pos);
-                                    // notifyDataSetChanged();
+                                    selection.remove(pos);
+                                    data.remove(pos);
+                                    notifyDataSetChanged();
                                     return true;
                             }
                             return false;
